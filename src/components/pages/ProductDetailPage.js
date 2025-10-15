@@ -1,9 +1,10 @@
-// Product Detail Page
-import { Star,Minus } from "lucide-react";
-import { Plus } from "lucide-react";
-import Image from 'next/image';
-import { useState } from "react";
-import { useEffect } from "react";
+// ================================
+// src/components/pages/ProductDetailPage.js - Version avec images dynamiques
+// ================================
+
+import { Star, Minus, Plus } from "lucide-react";
+import Image from "next/image";
+import { useState, useEffect, useCallback } from "react";
 import { initialProducts } from "@/lib/initialData";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useCart } from "@/contexts/CartContext";
@@ -17,12 +18,53 @@ const ProductDetailPage = ({ productId }) => {
   const [selectedColor, setSelectedColor] = useState("Blanc");
   const [selectedPattern, setSelectedPattern] = useState("");
   const [quantity, setQuantity] = useState(1);
+  const [currentImage, setCurrentImage] = useState("");
+  const [imageLoading, setImageLoading] = useState(false);
 
+  // Initialisation du motif par défaut
   useEffect(() => {
     if (product) {
       setSelectedPattern(product.patterns[0]);
     }
   }, [product]);
+
+  // Fonction pour obtenir l'image actuelle selon la couleur et le motif
+  const getCurrentImage = useCallback(() => {
+    if (!product) return "";
+
+    // Si le produit a des images dynamiques
+    if (
+      product.images &&
+      product.images[selectedColor] &&
+      product.images[selectedColor][selectedPattern]
+    ) {
+      return product.images[selectedColor][selectedPattern];
+    }
+
+    // Sinon, utiliser l'image par défaut
+    return product.image;
+  }, [product, selectedColor, selectedPattern]);
+
+  // Mettre à jour l'image quand la couleur ou le motif change
+  useEffect(() => {
+    if (product) {
+      setImageLoading(true);
+      const newImage = getCurrentImage();
+
+      // Petit délai pour l'effet de transition
+      setTimeout(() => {
+        setCurrentImage(newImage);
+        setImageLoading(false);
+      }, 150);
+    }
+  }, [selectedColor, selectedPattern, product, getCurrentImage]);
+
+  // Initialiser l'image au chargement
+  useEffect(() => {
+    if (product) {
+      setCurrentImage(getCurrentImage());
+    }
+  }, [product, getCurrentImage]);
 
   if (!product)
     return <div className="p-8 text-center">Produit non trouvé</div>;
@@ -41,16 +83,36 @@ const ProductDetailPage = ({ productId }) => {
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-7xl mx-auto px-4">
         <div className="grid md:grid-cols-2 gap-12 bg-white rounded-xl shadow-lg p-8">
-          {/* Image */}
-          <div className="relative aspect-square">
-            <Image
-              src={product.image}
-              alt={product.name[lang]}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 50vw"
-              priority
-            />
+          {/* Image avec transition */}
+          <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-100">
+            <div
+              className={`absolute inset-0 transition-opacity duration-300 ${
+                imageLoading ? "opacity-0" : "opacity-100"
+              }`}
+            >
+              <Image
+                src={currentImage || product.image}
+                alt={product.name[lang]}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 50vw"
+                priority
+              />
+            </div>
+
+            {/* Indicateur de chargement */}
+            {imageLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                <div className="w-8 h-8 border-4 border-amber-600 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            )}
+
+            {/* Badge indiquant la combinaison actuelle */}
+            <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-md">
+              <p className="text-xs font-medium text-gray-700">
+                {selectedColor} • {selectedPattern}
+              </p>
+            </div>
           </div>
 
           {/* Details */}
@@ -61,29 +123,7 @@ const ProductDetailPage = ({ productId }) => {
             </p>
             <p className="text-gray-600 mb-8">{product.description[lang]}</p>
 
-            {/* Size Selection */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-2">
-                {t.product.size}
-              </label>
-              <div className="flex gap-2">
-                {product.sizes.map((size) => (
-                  <button
-                    key={size}
-                    onClick={() => setSelectedSize(size)}
-                    className={`px-4 py-2 rounded-lg border-2 transition-colors ${
-                      selectedSize === size
-                        ? "border-amber-600 bg-amber-50 text-amber-600"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Color Selection */}
+            {/* Color Selection - AVANT Size pour que l'image change d'abord */}
             <div className="mb-6">
               <label className="block text-sm font-medium mb-2">
                 {t.product.color}
@@ -93,10 +133,10 @@ const ProductDetailPage = ({ productId }) => {
                   <button
                     key={color}
                     onClick={() => setSelectedColor(color)}
-                    className={`px-4 py-2 rounded-lg border-2 transition-colors ${
+                    className={`px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
                       selectedColor === color
-                        ? "border-amber-600 bg-amber-50 text-amber-600"
-                        : "border-gray-200 hover:border-gray-300"
+                        ? "border-amber-600 bg-amber-50 text-amber-600 scale-105 shadow-md"
+                        : "border-gray-200 hover:border-gray-300 hover:scale-102"
                     }`}
                   >
                     {color}
@@ -113,7 +153,7 @@ const ProductDetailPage = ({ productId }) => {
               <select
                 value={selectedPattern}
                 onChange={(e) => setSelectedPattern(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-amber-600 focus:outline-none"
+                className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-amber-600 focus:outline-none transition-colors"
               >
                 {product.patterns.map((pattern) => (
                   <option key={pattern} value={pattern}>
@@ -121,6 +161,28 @@ const ProductDetailPage = ({ productId }) => {
                   </option>
                 ))}
               </select>
+            </div>
+
+            {/* Size Selection */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2">
+                {t.product.size}
+              </label>
+              <div className="flex gap-2">
+                {product.sizes.map((size) => (
+                  <button
+                    key={size}
+                    onClick={() => setSelectedSize(size)}
+                    className={`px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
+                      selectedSize === size
+                        ? "border-amber-600 bg-amber-50 text-amber-600 scale-105"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Quantity */}
@@ -131,7 +193,7 @@ const ProductDetailPage = ({ productId }) => {
               <div className="flex items-center gap-4">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200"
+                  className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
                 >
                   <Minus className="w-4 h-4" />
                 </button>
@@ -140,7 +202,7 @@ const ProductDetailPage = ({ productId }) => {
                 </span>
                 <button
                   onClick={() => setQuantity(quantity + 1)}
-                  className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200"
+                  className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
                 </button>
@@ -182,7 +244,8 @@ const ProductDetailPage = ({ productId }) => {
                   </div>
                 </div>
                 <p className="text-gray-600">
-                  Excellente qualité et design unique!
+                  Excellente qualité et design unique! Les motifs sont
+                  magnifiques.
                 </p>
               </div>
             </div>

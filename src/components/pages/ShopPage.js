@@ -4,7 +4,6 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useState } from "react";
 import { initialProducts } from "@/lib/initialData";
 
-
 const ShopPage = ({ setCurrentPage }) => {
   const { lang, t } = useLanguage();
   const [products] = useState(initialProducts);
