@@ -2,7 +2,7 @@
 // 10. src/app/api/auth/login/route.js
 // ================================
 import { NextResponse } from "next/server";
-import bcrypt from "bcrypt";
+// import bcrypt from "bcrypt";
 
 // POST - Connexion admin
 export async function POST(request) {
